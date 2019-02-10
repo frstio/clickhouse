@@ -12,6 +12,8 @@ import (
 	"github.com/kshvakov/clickhouse/lib/types"
 )
 
+var typeByteSlice = reflect.TypeOf([]byte{})
+
 func numInput(query string) int {
 
 	var (
@@ -96,13 +98,21 @@ func quote(v driver.Value) string {
 	}
 	switch v := reflect.ValueOf(v); v.Kind() {
 	case reflect.Slice:
-		values := make([]string, 0, v.Len())
-		for i := 0; i < v.Len(); i++ {
-			values = append(values, quote(v.Index(i).Interface()))
+		switch v := reflect.ValueOf(v); v.Kind() {
+		case reflect.Array, reflect.Slice:
+			if t := v.Type(); t != (typeByteSlice) {
+				values := make([]string, 0, v.Len())
+				for i := 0; i < v.Len(); i++ {
+					values = append(values, quote(v.Index(i).Interface()))
+				}
+				return strings.Join(values, ", ")
+			}
 		}
-		return strings.Join(values, ", ")
 	}
 	switch v := v.(type) {
+	case []byte:
+		// TODO: Performance
+		return "'" + strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(string(v)) + "'"
 	case string:
 		return "'" + strings.NewReplacer(`\`, `\\`, `'`, `\'`).Replace(v) + "'"
 	case time.Time:
