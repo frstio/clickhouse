@@ -29,6 +29,10 @@ func (str *FixedString) Write(encoder *binary.Encoder, v interface{}) error {
 		fixedString = binary.Str2Bytes(v)
 	case []byte:
 		fixedString = v
+	case *[]byte:
+		tmp := make([]byte, len(*v))
+		copy(tmp, *v)
+		fixedString = tmp
 	case encoding.BinaryMarshaler:
 		bytes, err := v.MarshalBinary()
 		if err != nil {
